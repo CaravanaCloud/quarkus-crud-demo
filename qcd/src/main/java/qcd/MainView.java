@@ -2,6 +2,7 @@ package qcd;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import qcd.pizza.Pizza;
 
 import java.sql.SQLException;
@@ -10,9 +11,15 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import org.vaadin.crudui.crud.CrudOperation;
+import org.vaadin.crudui.crud.impl.GridCrud;
+import org.vaadin.crudui.form.CrudFormFactory;
+
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
@@ -25,63 +32,42 @@ import com.vaadin.flow.router.Route;
 @Route("")
 public class MainView extends VerticalLayout {
 
-    @Inject
-    GreetService greetService;
-
-    @Inject
-    DataSource ds;
-
-    public Map<String, String> getHealthMap() {
-        try (var conn = ds.getConnection();
-            var stmt = conn.createStatement();
-            var rs = stmt.executeQuery("SELECT 1+1")){
-                var ok = rs.next() && 2 == rs.getInt(1);
-                if (ok) 
-                    return Map.of("status", "ok");
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }   
-        return Map.of("status", "error");
-    }
 
     @PostConstruct
-    public void init(){
-        var hcButton = new Button("Check Health", e -> {
-            var status = getHealthMap().get("status");
-            add(new Paragraph("Health status: " + status));
-        });
-        add(hcButton);
+    void init(){
+        add(new H1("Pizza CRUD"));
+        GridCrud<Pizza> crud = new GridCrud<>(Pizza.class);
+        crud.setFindAllOperation(this::findAllPizzas);
+        crud.setAddOperation(this::persist);
+        crud.setUpdateOperation(this::persist);
+        crud.setDeleteOperation(this::deletePizza);
+        
+        Grid<Pizza> grid = crud.getGrid();
+        grid.removeColumnByKey("id");
+        grid.removeColumnByKey("persistent");
 
-        var listButton = new Button("List Pizzas", e -> {
-            Pizza.listAll()
-                .stream()
-                .map(p -> new Paragraph(p.toString()))
-                .forEach(this::add);
-        });
-        add(listButton);
+        add(crud);
     }
 
-    public MainView() {
-        // Use TextField for standard text input
-        TextField textField = new TextField("Your name");
-        textField.addThemeName("bordered");
+    @Transactional
+    List<Pizza> findAllPizzas() {
+        return Pizza.listAll();
+    }
 
-        // Button click listeners can be defined as lambda expressions
-        Button button = new Button("Say hello", e -> {
-            add(new Paragraph(greetService.greet(textField.getValue())));
-        });
 
-        // Theme variants give you predefined extra styles for components.
-        // Example: Primary button is more prominent look.
-        button.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+    @Transactional
+    Pizza persist(Pizza pizza) {
+        if (pizza.isPersistent()) {
+            pizza = Pizza.getEntityManager().merge(pizza);
+        } else {
+            pizza.persist();
+        }
+        return pizza;
+    }
 
-        // You can specify keyboard shortcuts for buttons.
-        // Example: Pressing enter in this view clicks the Button.
-        button.addClickShortcut(Key.ENTER);
 
-        // Use custom CSS classes to apply styling. This is defined in shared-styles.css.
-        addClassName("centered-content");
-
-        add(textField, button);
+    @Transactional
+    void deletePizza(Pizza pizza) {
+        pizza.delete();
     }
 }

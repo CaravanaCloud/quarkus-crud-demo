@@ -108,3 +108,22 @@ var listButton = new Button("List Pizzas", e -> {
 });
 add(listButton);
 ```
+
+better list
+
+pom.xml
+```
+<repositories>
+  <repository>
+    <id>Vaadin Directory</id>
+    <url>https://maven.vaadin.com/vaadin-addons</url>
+ </repository>
+```
+
+```
+<dependency>
+   <groupId>org.vaadin.crudui</groupId>
+   <artifactId>crudui</artifactId>
+   <version>7.1.0</version>
+</dependency>
+```

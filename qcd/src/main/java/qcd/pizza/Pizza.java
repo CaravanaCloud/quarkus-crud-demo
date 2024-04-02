@@ -17,6 +17,18 @@ public class Pizza extends PanacheEntity {
         return p;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
     @Override
     public String toString() {
         return Map.of(
